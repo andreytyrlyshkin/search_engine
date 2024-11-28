@@ -3,42 +3,65 @@ package searchengine.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import searchengine.exceptions.IndexingIsAlreadyRunningException;
-import searchengine.exceptions.IndexingIsNotRunningException;
+import searchengine.dto.statistics.PageDto;
+import searchengine.exceptions.ResourceNotFoundException;
+import searchengine.model.Page;
+import searchengine.model.Site;
+import searchengine.model.Status;
+import searchengine.repositories.PageRepository;
+import searchengine.repositories.SiteRepository;
+
+import java.time.Instant;
+import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class APIService {
 
-    private final boolean isRunning;
+    private final SiteRepository siteRepository;
+    private final PageRepository pageRepository;
 
-    public APIService (boolean isRunning){
-        this.isRunning = isRunning;
-    }
-
-    public boolean getIsRunning(){
-        return isRunning;
-    }
-
-    public boolean setIsRunning(boolean isRunning){
-        boolean tmp = !isRunning;
-        isRunning = tmp;
-        return isRunning;
-    }
-
-    public String isIndexingAlreadyRunning() {
-        log.info("result: " + isRunning);
-        if(isRunning){
-            throw(new IndexingIsAlreadyRunningException("'error': \"Индексация уже запущена\""));
+    public void delete(String url) {
+        Site site = siteRepository.findByUrl(url)
+                .orElseThrow(() -> new ResourceNotFoundException("Site with url " + url + " is not found."));
+        log.info("Site with id " + url + " deleted");
+        List<Page> pageList = pageRepository.findBySite(site);
+        for(Page page : pageList){
+            pageRepository.deleteById(page.getId());
         }
-        return "result: " + !isRunning;
+        siteRepository.delete(site);
     }
 
-    public String isIndexingAlreadyStopped() {
-        log.info("result: " + isRunning);
-        if(!isRunning){
-            throw(new IndexingIsNotRunningException("'error': \"Индексация не запущена\""));
-        }
-        return "result: " + isRunning;
+    public void createNewRecordIndexing(){
+        Site site = new Site();
+        site.setStatus(Status.INDEXING);
+        site.setStatusTime(Instant.now());
+        site.setUrl("PARENT_URL");
+        site.setName("NAME_OF_SITE");
+        log.info("Indexing is started.");
+        siteRepository.save(site);
     }
+
+    public void createNewRecordIndexed(){
+        Site site = new Site();
+        site.setStatus(Status.INDEXED);
+        site.setStatusTime(Instant.now());
+        site.setUrl("PARENT_URL");
+        site.setName("NAME_OF_SITE");
+        log.info("Indexing is ended.");
+        siteRepository.save(site);
+    }
+
+    public void createNewRecordFailed(String errorMessage){
+        Site site = new Site();
+        site.setStatus(Status.FAILED);
+        site.setStatusTime(Instant.now());
+        site.setUrl("PARENT_URL");
+        site.setName("NAME_OF_SITE");
+        site.setLastError(errorMessage);
+        log.error(errorMessage);
+        siteRepository.save(site);
+    }
+
 }
