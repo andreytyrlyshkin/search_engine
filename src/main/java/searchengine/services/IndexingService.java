@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class IndexingService extends RecursiveAction {
 
-    @Getter
+    /*@Getter
     @Setter
     private static AtomicBoolean isRunning = new AtomicBoolean(false);
 
@@ -87,5 +87,16 @@ public class IndexingService extends RecursiveAction {
             e.printStackTrace();
             return null;
         }
+    }*/
+
+    public ResponseInterface startIndexing() {
+        if (isIndexingAlreadyRunning()) {
+            return new Bad(false, "Индексация уже запущена");
+        }
+        // тут вытащите сайты из конфига,
+
+        // для каждого сайта удалите все данные и измените статус на IDEXING. А потом асинхронно запустите индексацию в другом классе.
+        return new Successful(true);
+
     }
 }

@@ -1,13 +1,8 @@
 package searchengine.controllers;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.exceptions.IndexingIsAlreadyRunningException;
-import searchengine.services.IndexingService;
+import org.springframework.web.bind.annotation.*;
+import searchengine.responses.ResponseInterface;
 import searchengine.services.StatisticsService;
 
 import java.util.concurrent.ForkJoinPool;
@@ -23,28 +18,32 @@ public class ApiController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<StatisticsResponse> statistics() {
+    public ResponseEntity<ResponseInterface> statistics() {
         return ResponseEntity.ok(statisticsService.getStatistics());
     }
 
-
     @GetMapping("/startIndexing")
-    public ResponseEntity<?> startIndexing(){
-        try (ForkJoinPool forkJoinPool = new ForkJoinPool()) {
-            if(IndexingService.getIsRunning().get()){
-                return new ResponseEntity<>(new IndexingIsAlreadyRunningException("Индексация уже запущена"), HttpStatus.LOCKED);
-            }
-            forkJoinPool.invoke(new IndexingService(PARENT_URL));
-        }
-        return new ResponseEntity<>(HttpStatus.OK);
+    public ResponseEntity<ResponseInterface> startIndexing() {
+        return ResponseEntity.ok(indexingService.startIndexing());
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity<?> stopIndexing(){
-        //???
-        if(IndexingService.getIsRunning().get()){
-            return new ResponseEntity<>(HttpStatus.OK);
-        }
-        return new ResponseEntity<>(new IndexingIsAlreadyRunningException("Индексация не запущена"), HttpStatus.LOCKED);
+    public ResponseEntity<ResponseInterface> stopIndexing() {
+        return ResponseEntity.ok(indexingService.stopIndexing());
+    }
+
+    @PostMapping(value = "/indexPage")
+    @ResponseBody
+    public ResponseEntity<ResponseInterface> indexPage(PageUrl pageUrl) {
+        return ResponseEntity.ok(indexingService.indexPage(pageUrl.getUrl()));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ResponseInterface> search(
+            @RequestParam("query") String query,
+            @RequestParam(value = "site", required = false) String site,
+            @RequestParam("offset") Integer offset,
+            @RequestParam("limit") Integer limit) {
+        return ResponseEntity.ok(searchingService.search(query, site, offset, limit));
     }
 }
